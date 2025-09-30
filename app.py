@@ -2,12 +2,14 @@ import streamlit as st
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
-import gdown
+import gdown # <-- DEPENDENCY: Used for downloading the model from Google Drive
 import os
 from PIL import Image
 
 # --- Configuration Constants ---
-# NOTE: Ensure you have gdown installed: pip install gdown
+# NOTE: This app requires Streamlit, TensorFlow, Pillow, NumPy, and gdown.
+# If running in a production environment (like Streamlit Cloud), ensure these
+# are listed in your requirements.txt file.
 DRIVE_FILE_ID = "1qlCZhwRvsQuJeSmRlHiQXYYqsUdR4h2q" 
 MODEL_FILENAME = "saved_model.keras" 
 image_size = (128, 128)
@@ -39,6 +41,7 @@ def download_and_load_model():
             Please check the following:
             1. Is the `DRIVE_FILE_ID` correct in the script?
             2. Is the file shared publicly ("Anyone with the link") on Google Drive?
+            3. **CRITICAL:** Ensure the `gdown` dependency is installed in your environment.
             
             Error details: {e}
             """
@@ -96,8 +99,14 @@ if uploaded_file is not None:
 
 # --- Instructions to run the app ---
 # 1. Save this code as a Python file (e.g., app.py).
-# 2. Make sure you have the required libraries installed:
+# 2. Before running, ensure all required libraries are installed:
 #    pip install streamlit tensorflow pillow numpy gdown
-# 3. Open your terminal or command prompt.
-# 4. Navigate to the directory where you saved app.py.
-# 5. Run the command: streamlit run app.py
+# 3. If deploying, create a requirements.txt file containing these dependencies:
+#    streamlit
+#    tensorflow
+#    pillow
+#    numpy
+#    gdown
+# 4. Open your terminal or command prompt.
+# 5. Navigate to the directory where you saved app.py.
+# 6. Run the command: streamlit run app.py
