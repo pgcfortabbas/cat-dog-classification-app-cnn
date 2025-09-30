@@ -1,66 +1,103 @@
 import streamlit as st
 import tensorflow as tf
-from PIL import Image
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
+import gdown
 import os
+from PIL import Image
 
-# Instructions on how to run the app:
-# 1. Save this code as a Python file (e.g., app.py).
-# 2. Make sure you have Streamlit and TensorFlow installed: pip install streamlit tensorflow pillow numpy
-# 3. Make sure the model file 'cat_dog_classifier_model.keras' is in the same directory as this app.py file, or provide the correct path.
-# 4. Open your terminal or command prompt.
-# 5. Navigate to the directory where you saved app.py.
-# 6. Run the command: streamlit run app.py
-
-# Load the trained model
-# Make sure the path below is correct relative to where you run the streamlit app,
-# or use the absolute path.
-model_path = 'https://drive.google.com/file/d/12Zm-LJUT3_iQW-4Hu1SXnybgHyKXlo04/view?usp=sharing'
+# --- Configuration Constants ---
+# NOTE: Ensure you have gdown installed: pip install gdown
+DRIVE_FILE_ID = "1qlCZhwRvsQuJeSmRlHiQXYYqsUdR4h2q" 
+MODEL_FILENAME = "saved_model.keras" 
+image_size = (128, 128)
+CLASS_NAMES = ["Cat", "Dog"] # Assuming 0=Cat, 1=Dog based on typical binary classification setup
+CONFIDENCE_THRESHOLD = 0.75
 
 @st.cache_resource
-def load_my_model(model_path):
-    """Loads the trained Keras model."""
-    if not os.path.exists(model_path):
-        st.error(f"Model file not found at: {model_path}")
-        st.stop()
+def download_and_load_model():
+    """
+    Attempts to download the model from Google Drive and load it using Keras.
+    Uses st.cache_resource to ensure the heavy download/load process only runs once.
+    """
     try:
-        model = tf.keras.models.load_model(model_path)
-        return model
+        # 1. Download the file if it doesn't exist locally
+        if not os.path.exists(MODEL_FILENAME):
+            with st.spinner(f"Downloading model {MODEL_FILENAME} from Google Drive..."):
+                # Download using the provided Google Drive ID
+                gdown.download(id=DRIVE_FILE_ID, output=MODEL_FILENAME, quiet=False)
+                st.success("Model downloaded successfully!")
+
+        # 2. Load the Keras model
+        return tf.keras.models.load_model(MODEL_FILENAME)
+    
     except Exception as e:
-        st.error(f"Error loading model: {e}")
-        st.stop()
+        # Display detailed error information if loading fails
+        st.error(
+            f"""
+            **MODEL LOAD FAILED!**
+            Please check the following:
+            1. Is the `DRIVE_FILE_ID` correct in the script?
+            2. Is the file shared publicly ("Anyone with the link") on Google Drive?
+            
+            Error details: {e}
+            """
+        )
+        st.stop() # Stops the execution of the Streamlit app
 
-model = load_my_model(model_path)
+st.title("Image Classification App")
+st.markdown("---")
 
-st.title("Dog or Cat Image Classifier")
-st.write("Upload an image and the model will predict if it's a dog or a cat.")
+# Load the model (or attempt to download and load)
+model = download_and_load_model()
+
+st.write("Upload an image and the model will predict its class.")
+
 
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     try:
-        # Display the uploaded image
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image.", use_column_width=True)
+        # Load and display the image, resizing it to the target size
+        # load_img from keras.preprocessing is used here
+        image = load_img(uploaded_file, target_size=image_size)
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-        # Preprocess the image for the model
-        img_height, img_width = 128, 128 # Ensure this matches the training size
-        img_array = image.resize((img_width, img_height))
-        img_array = tf.keras.preprocessing.image.img_to_array(img_array)
-        img_array = np.expand_dims(img_array, axis=0) # Add batch dimension
-        img_array = img_array / 255.0 # Rescale pixel values
+        # Preprocess the image array
+        img_array = img_to_array(image)
+        img_array = np.expand_dims(img_array, axis=0) / 255.0 # Add batch dimension and normalize
 
         # Make prediction
-        prediction = model.predict(img_array)
-        score = prediction[0][0]
+        predictions = model.predict(img_array)
+        
+        # Determine the predicted class (highest probability index)
+        predicted_class_index = np.argmax(predictions)
+        predicted_probability = predictions[0][predicted_class_index]
+        
+        st.subheader("Classification Results")
 
-        # Interpret the prediction
-        if score > 0.5:
-            st.write(f"Prediction: Dog ({score:.2f})")
-        elif score <= 0.5:
-            st.write(f"Prediction: Cat ({1-score:.2f})")
+        # Interpret results based on confidence threshold
+        if predicted_probability >= CONFIDENCE_THRESHOLD:
+            predicted_class_name = CLASS_NAMES[predicted_class_index]
+            result_message = f"**{predicted_class_name}**"
+            st.success(f"✅ Confident Prediction: {predicted_class_name}")
         else:
-             st.write("Prediction: Invalid Image") # This case is unlikely with a sigmoid output, but included for completeness
+            predicted_class_name = "Uncertain/Invalid"
+            result_message = "**Uncertain/Invalid** (Confidence too low)"
+            st.warning("⚠️ Prediction confidence is low. This image may not be suitable for the model.")
+
+        # Display final results
+        st.write(f"Predicted Class: {result_message}")
+        st.write(f"Prediction (class index): **{predicted_class_index}**")
+        st.write(f"Confidence (Max Probability): **{predicted_probability:.4f}** (Threshold: {CONFIDENCE_THRESHOLD})")
 
     except Exception as e:
-        st.error(f"Error processing image or making prediction: {e}")
+        st.error(f"An error occurred during image processing or prediction: {e}")
+
+# --- Instructions to run the app ---
+# 1. Save this code as a Python file (e.g., app.py).
+# 2. Make sure you have the required libraries installed:
+#    pip install streamlit tensorflow pillow numpy gdown
+# 3. Open your terminal or command prompt.
+# 4. Navigate to the directory where you saved app.py.
+# 5. Run the command: streamlit run app.py
