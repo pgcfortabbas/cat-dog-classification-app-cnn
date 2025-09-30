@@ -10,7 +10,7 @@ from PIL import Image
 # NOTE: This app requires Streamlit, TensorFlow, Pillow, NumPy, and gdown.
 # If running in a production environment (like Streamlit Cloud), ensure these
 # are listed in your requirements.txt file.
-DRIVE_FILE_ID = "1qlCZhwRvsQuJeSmRlHiQXYYqsUdR4h2q" 
+DRIVE_FILE_ID = "12Zm-LJUT3_iQW-4Hu1SXnybgHyKXlo04" # UPDATED FILE ID
 MODEL_FILENAME = "saved_model.keras" 
 image_size = (128, 128)
 CLASS_NAMES = ["Cat", "Dog"] # Assuming 0=Cat, 1=Dog based on typical binary classification setup
