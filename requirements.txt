@@ -1,5 +1,5 @@
-tensorflow
 streamlit
-Pillow
+tensorflow
 numpy
-scikit-learn
+pillow
+gdown
